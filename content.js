@@ -165,7 +165,7 @@
           text.includes("skip ▶") ||
           text.includes("skip")
         ) {
-          if (el.closest(".ytp-ad-module, .video-ads, .ytp-ad-player-overlay, #movie_player, .html5-video-player")) {
+          if (el.closest(".ytp-ad-module, .video-ads, .ytp-ad-player-overlay, .ytp-ad-player-overlay-layout")) {
             return el;
           }
         }
@@ -285,28 +285,12 @@
 
       // 2. SPEED UP & AUTO-SKIP
       if (settings.autoSkip) {
-        // Boost playback rate to 16x
-        if (settings.speedUp) {
+        // Boost playback rate to 16x during ads (finishes 15s ad in ~0.9s naturally)
+        if (settings.speedUp && video.playbackRate < 16) {
           video.playbackRate = 16.0;
         }
 
-        // Jump video time directly to end
-        try {
-          if (isFinite(video.duration) && video.duration > 0) {
-            video.currentTime = video.duration;
-          } else {
-            video.currentTime = 999999;
-          }
-        } catch (_) {}
-
-        // Ensure video is playing so the 'ended' event fires immediately
-        if (video.paused) {
-          try {
-            video.play().catch(() => {});
-          } catch (_) {}
-        }
-
-        // Re-check skip button after time jump
+        // Click skip button the millisecond it appears
         const lateSkipBtn = findSkipButton();
         if (lateSkipBtn) {
           clickElement(lateSkipBtn);

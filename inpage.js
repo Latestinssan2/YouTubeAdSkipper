@@ -28,7 +28,7 @@
         }
       } catch (_) {}
 
-      // 3. Fast-forward video element directly
+      // 3. Fast-forward video element directly at 16x speed (NO currentTime jumping)
       const video = player.querySelector("video");
       if (video) {
         try {
@@ -36,18 +36,6 @@
             video.playbackRate = 16.0;
           }
         } catch (_) {}
-
-        try {
-          if (isFinite(video.duration) && video.duration > 0) {
-            video.currentTime = video.duration;
-          }
-        } catch (_) {}
-
-        if (video.paused) {
-          try {
-            video.play().catch(() => {});
-          } catch (_) {}
-        }
       }
 
       // 4. Click any modern skip button
