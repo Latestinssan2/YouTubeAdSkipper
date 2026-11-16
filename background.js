@@ -30,6 +30,14 @@ async function injectIntoExistingTabs() {
         try {
           await chrome.scripting.executeScript({
             target: { tabId: tab.id },
+            files: ["inpage.js"],
+            world: "MAIN"
+          });
+        } catch (_) {}
+
+        try {
+          await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
             files: ["content.js"]
           });
         } catch (_) {}
