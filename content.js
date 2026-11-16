@@ -17,9 +17,14 @@
   let wasMutedByAdSkipper = false;
   let originalVolume = 1;
   let isCurrentlyHandlingAd = false;
+  let hasRecordedCurrentAd = false;
   let lastAdSkippedTime = 0;
   let observer = null;
   let checkInterval = null;
+
+  let activeToast = null;
+  let toastTimer = null;
+  let toastFadeTimer = null;
 
   // Local stats cache
   let stats = {
@@ -66,7 +71,8 @@
   // Record an ad skipped
   function recordAdSkipped() {
     const now = Date.now();
-    if (now - lastAdSkippedTime < 1500) return;
+    // Strong debounce to prevent duplicate counts and repeated toasts
+    if (now - lastAdSkippedTime < 4000) return;
     lastAdSkippedTime = now;
 
     stats.adsSkipped += 1;
@@ -92,6 +98,14 @@
   // Display temporary on-screen toast
   function showToast(text) {
     try {
+      // Clear any existing toast timers and elements
+      if (activeToast) {
+        clearTimeout(toastTimer);
+        clearTimeout(toastFadeTimer);
+        activeToast.remove();
+        activeToast = null;
+      }
+
       const existing = document.querySelector(".ad-skipper-toast");
       if (existing) existing.remove();
 
@@ -99,11 +113,19 @@
       toast.className = "ad-skipper-toast";
       toast.innerHTML = `<span class="ad-skipper-toast-icon">✓</span> <span>${text}</span>`;
       document.body.appendChild(toast);
+      activeToast = toast;
 
-      setTimeout(() => {
-        toast.classList.add("fade-out");
-        setTimeout(() => toast.remove(), 300);
-      }, 2000);
+      toastTimer = setTimeout(() => {
+        if (activeToast) {
+          activeToast.classList.add("fade-out");
+          toastFadeTimer = setTimeout(() => {
+            if (activeToast) {
+              activeToast.remove();
+              activeToast = null;
+            }
+          }, 300);
+        }
+      }, 2200);
     } catch (_) {}
   }
 
@@ -308,12 +330,21 @@
           clickElement(lateSkipBtn);
         }
 
-        recordAdSkipped();
+        // Record strictly ONCE per ad sequence
+        if (!hasRecordedCurrentAd) {
+          hasRecordedCurrentAd = true;
+          recordAdSkipped();
+        }
       }
     } else {
       // Ad is no longer playing, restore normal playback
       if (isCurrentlyHandlingAd) {
         isCurrentlyHandlingAd = false;
+
+        // Reset recorded flag with debounce delay to cover multi-ad transitions cleanly
+        setTimeout(() => {
+          hasRecordedCurrentAd = false;
+        }, 1500);
 
         if (video) {
           // Restore playback rate
