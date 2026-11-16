@@ -4,6 +4,8 @@
 (() => {
   "use strict";
 
+  let wasMutedByScript = false;
+
   function handlePlayerAds() {
     const player = document.getElementById("movie_player") || document.querySelector(".html5-video-player");
     if (!player) return;
@@ -19,16 +21,17 @@
         }
       } catch (_) {}
 
-      // 2. Mute ad via player API
+      // 2. Mute ad via player API and track that we muted it
       try {
         if (typeof player.isMuted === "function" && !player.isMuted()) {
           if (typeof player.mute === "function") {
+            wasMutedByScript = true;
             player.mute();
           }
         }
       } catch (_) {}
 
-      // 3. Fast-forward video element directly at 16x speed (NO currentTime jumping)
+      // 3. Fast-forward video element directly at 16x speed
       const video = player.querySelector("video");
       if (video) {
         try {
@@ -46,6 +49,22 @@
         try {
           skipBtn.click();
         } catch (_) {}
+      }
+    } else {
+      // Normal playback: UNMUTE immediately if we muted it during the ad
+      if (wasMutedByScript) {
+        wasMutedByScript = false;
+        try {
+          if (typeof player.unMute === "function") {
+            player.unMute();
+          }
+        } catch (_) {}
+      }
+
+      // Restore normal playback rate
+      const video = player.querySelector("video");
+      if (video && video.playbackRate > 2.0) {
+        video.playbackRate = 1.0;
       }
     }
   }
