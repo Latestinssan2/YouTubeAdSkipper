@@ -206,7 +206,7 @@
     } catch (_) {}
   }
 
-  // Detect whether an ad is currently playing
+  // Detect whether an actual video ad is currently playing
   function isAdActive() {
     const player = document.querySelector("#movie_player, .html5-video-player, ytd-player");
     if (player) {
@@ -218,27 +218,18 @@
       }
     }
 
-    // Check ad overlays and modules
-    if (document.querySelector(".ytp-ad-player-overlay, .ytp-ad-player-overlay-layout, .ytp-ad-action-interstitial")) {
+    if (document.querySelector(".ad-showing, .ad-interrupting")) {
       return true;
     }
 
-    // Check if video-ads container has active children
-    const adModule = document.querySelector(".video-ads.ytp-ad-module, .ytp-ad-module");
-    if (adModule && adModule.children.length > 0) {
-      return true;
-    }
-
-    // If skip button is visible, ad is definitely active
+    // If a skip button is physically rendered on screen, ad is active
     if (findSkipButton()) {
       return true;
     }
 
-    // Check ad badges or sponsored labels
-    const adBadge = document.querySelector(
-      ".ytp-ad-text, .ytp-ad-preview-text, .ytp-ad-badge, .ytp-ad-simple-attributed-string, .badge-style-ad-badge"
-    );
-    if (adBadge && adBadge.offsetParent !== null) {
+    // Active ad overlays currently rendered
+    const overlay = document.querySelector(".ytp-ad-player-overlay-layout, .ytp-ad-player-overlay");
+    if (overlay && overlay.offsetParent !== null) {
       return true;
     }
 
