@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Ad Skipper - Options</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>YouTube Ad Skipper</h1>
+      <p>Configure your ad skipping preferences</p>
+    </header>
+
+    <div class="content">
+      <section class="section">
+        <h2>General Settings</h2>
+
+        <div class="setting">
+          <label class="toggle">
+            <input type="checkbox" id="autoSkip" checked>
+            <span class="toggle-label">Auto Skip Ads</span>
+          </label>
+          <p class="description">Automatically skip YouTube ads when detected</p>
+        </div>
+
+        <div class="setting">
+          <label class="toggle">
+            <input type="checkbox" id="muteAds" checked>
+            <span class="toggle-label">Mute Ads</span>
+          </label>
+          <p class="description">Mute audio during ads</p>
+        </div>
+
+        <div class="setting">
+          <label class="toggle">
+            <input type="checkbox" id="showNotifications">
+            <span class="toggle-label">Show Notifications</span>
+          </label>
+          <p class="description">Show a notification when an ad is skipped</p>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Skip Settings</h2>
+
+        <div class="setting">
+          <label for="skipInterval">Skip after (seconds)</label>
+          <input type="number" id="skipInterval" min="1" max="30" value="5">
+          <p class="description">Number of seconds before skipping the ad</p>
+        </div>
+      </section>
+
+      <div class="actions">
+        <button id="save" class="btn btn-primary">Save Settings</button>
+        <button id="reset" class="btn btn-secondary">Reset to Defaults</button>
+      </div>
+    </div>
+
+    <footer class="footer">
+      <a href="https://github.com" target="_blank">GitHub</a>
+      <span>v1.0.0</span>
+      <a href="https://www.youtube.com" target="_blank">YouTube</a>
+    </footer>
+  </div>
+  <script src="options.js"></script>
+</body>
+</html>

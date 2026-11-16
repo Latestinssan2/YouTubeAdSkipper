@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Ad Skipper</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="logo">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <rect width="32" height="32" rx="8" fill="#FF0000"/>
+          <path d="M13 9L23 16L13 23V9Z" fill="white"/>
+        </svg>
+      </div>
+      <h1>Ad Skipper</h1>
+    </header>
+
+    <div class="status" id="status">
+      <span class="dot"></span>
+      <span id="statusText">Ready</span>
+    </div>
+
+    <div class="controls">
+      <label class="toggle">
+        <input type="checkbox" id="autoSkip" checked>
+        <span class="toggle-label">Auto Skip Ads</span>
+      </label>
+
+      <label class="toggle">
+        <input type="checkbox" id="muteAds" checked>
+        <span class="toggle-label">Mute Ads</span>
+      </label>
+
+      <label class="toggle">
+        <input type="checkbox" id="showNotifications">
+        <span class="toggle-label">Show Notifications</span>
+      </label>
+    </div>
+
+    <div class="settings">
+      <label for="skipInterval">Skip after (seconds):</label>
+      <input type="number" id="skipInterval" min="1" max="30" value="5">
+    </div>
+
+    <div class="actions">
+      <button id="testSkip" class="btn btn-primary">Test Skip</button>
+      <button id="openYoutube" class="btn btn-secondary">Open YouTube</button>
+    </div>
+
+    <footer class="footer">
+      <a href="#" id="optionsLink">Options</a>
+      <span>v1.0.0</span>
+    </footer>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

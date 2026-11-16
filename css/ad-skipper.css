@@ -1,0 +1,47 @@
+/* YouTube Ad Skipper Styles */
+/* Custom styles injected into YouTube pages for ad detection */
+
+.ad-skipper-indicator {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  background: rgba(255, 0, 0, 0.9);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.ad-skipper-indicator::before {
+  content: "⏭";
+  font-size: 14px;
+}
+
+.ad-skipper-indicator.skipping {
+  background: rgba(76, 175, 80, 0.9);
+}
+
+.ad-skipper-indicator.skipping::before {
+  content: "✓";
+}
+
+.ad-skipper-indicator.muted::before {
+  content: "🔇";
+}
+
+.ad-skipper-progress {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: #FF0000;
+  width: 0%;
+  transition: width 0.1s linear;
+  z-index: 9999;
+}
