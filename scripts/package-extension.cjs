@@ -16,7 +16,6 @@ const filesToZip = [
   "manifest.json",
   "background.js",
   "content.js",
-  "inpage.js",
   "popup.html",
   "popup.js",
   "popup.css",

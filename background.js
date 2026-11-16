@@ -4,7 +4,6 @@ const DEFAULT_SETTINGS = {
   autoSkip: true,
   muteAds: true,
   speedUp: true,
-  skipInterval: 0,
   showNotifications: false,
   blockBanners: true
 };
@@ -24,14 +23,6 @@ async function injectIntoExistingTabs() {
           await chrome.scripting.insertCSS({
             target: { tabId: tab.id },
             files: ["css/ad-skipper.css"]
-          });
-        } catch (_) {}
-
-        try {
-          await chrome.scripting.executeScript({
-            target: { tabId: tab.id },
-            files: ["inpage.js"],
-            world: "MAIN"
           });
         } catch (_) {}
 
