@@ -104,7 +104,128 @@
     } catch (_) {}
   }
 
-  // Check strictly if an actual video ad is playing
+  // High accuracy visibility check
+  function isElementVisible(el) {
+    if (!el) return false;
+    try {
+      if (typeof el.checkVisibility === "function") {
+        return el.checkVisibility({
+          checkOpacity: false,
+          checkVisibilityCSS: true
+        });
+      }
+      const rect = el.getBoundingClientRect();
+      if (rect.width === 0 && rect.height === 0) return false;
+      const style = window.getComputedStyle(el);
+      return style.display !== "none" && style.visibility !== "hidden";
+    } catch (_) {
+      return el.offsetParent !== null;
+    }
+  }
+
+  // Safe click supporting modern pointer & mouse events
+  function safeClick(el) {
+    if (!el) return false;
+    try {
+      el.click();
+    } catch (_) {}
+    try {
+      const opts = { bubbles: true, cancelable: true, view: window };
+      el.dispatchEvent(new PointerEvent("pointerdown", opts));
+      el.dispatchEvent(new MouseEvent("mousedown", opts));
+      el.dispatchEvent(new PointerEvent("pointerup", opts));
+      el.dispatchEvent(new MouseEvent("mouseup", opts));
+      el.dispatchEvent(new MouseEvent("click", opts));
+    } catch (_) {}
+    return true;
+  }
+
+  // Find any active skip button anywhere in the player (video ad or Auto End Screen / Post-Roll CTA)
+  function findAnySkipButton() {
+    const player = document.querySelector("#movie_player, .html5-video-player") || document;
+
+    // 1. Direct high-priority modern & legacy YouTube skip button selectors
+    const directSelectors = [
+      ".ytp-ad-skip-button-modern",
+      ".ytp-skip-ad-button",
+      ".ytp-ad-skip-button",
+      ".ytp-ad-skip-button-slot button",
+      ".ytp-ad-skip-button-container button",
+      "button.ytp-ad-skip-button-modern",
+      "div.ytp-ad-skip-button-modern",
+      "button.ytp-ad-skip-button-text",
+      ".ytp-ad-skip-button-text",
+      "[id^='skip-button:'] button",
+      "[id^='skip-button:']",
+      ".videoAdUiSkipButton",
+      "button[class*='ytp-ad-skip']",
+      "div[class*='ytp-ad-skip']",
+      ".ytp-ad-action-interstitial [aria-label*='Skip' i]",
+      ".ytp-ad-action-interstitial [class*='skip' i]",
+      ".ytp-ad-action-interstitial button",
+      "button[aria-label*='Skip' i]",
+      "[role='button'][aria-label*='Skip' i]"
+    ];
+
+    for (const sel of directSelectors) {
+      const el = player.querySelector(sel);
+      if (el && isElementVisible(el)) {
+        return el;
+      }
+    }
+
+    // 2. Search inside ad containers (.video-ads, .ytp-ad-module, .ytp-ad-action-interstitial, .ytp-ad-player-overlay)
+    const adContainers = player.querySelectorAll(
+      ".ytp-ad-module, .video-ads, .ytp-ad-player-overlay, .ytp-ad-action-interstitial, .ytp-ad-player-overlay-layout"
+    );
+    for (const container of adContainers) {
+      const candidates = container.querySelectorAll("button, [role='button'], div, a, span");
+      for (const el of candidates) {
+        if (el.hasAttribute("disabled") || el.getAttribute("aria-disabled") === "true") continue;
+
+        const aria = (el.getAttribute("aria-label") || "").toLowerCase();
+        const text = (el.textContent || "").trim().toLowerCase();
+
+        if (
+          aria.includes("skip") ||
+          text === "skip" ||
+          text.startsWith("skip ") ||
+          text.startsWith("skip\n") ||
+          text.includes("skip ▶") ||
+          text.includes("skip ad")
+        ) {
+          if (isElementVisible(el)) {
+            return el;
+          }
+        }
+      }
+    }
+
+    // 3. Fallback: Search the entire player for buttons with "skip" in text or aria-label
+    // Normal YouTube controls NEVER contain the word "skip"
+    const buttons = player.querySelectorAll("button, [role='button']");
+    for (const btn of buttons) {
+      if (btn.hasAttribute("disabled") || btn.getAttribute("aria-disabled") === "true") continue;
+
+      const aria = (btn.getAttribute("aria-label") || "").toLowerCase();
+      const text = (btn.textContent || "").trim().toLowerCase();
+      if (
+        aria.includes("skip ad") ||
+        aria === "skip" ||
+        text === "skip" ||
+        text.startsWith("skip ") ||
+        text.includes("skip ▶")
+      ) {
+        if (isElementVisible(btn)) {
+          return btn;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  // Check strictly if an actual video ad or Auto End Screen / Post-Roll CTA is active
   function isAdActive() {
     const player = document.querySelector("#movie_player, .html5-video-player");
     if (player) {
@@ -115,80 +236,77 @@
         return true;
       }
     }
-    return Boolean(document.querySelector(".ad-showing, .ad-interrupting"));
-  }
-
-  // Click skip button if available
-  function tryClickSkipButton() {
-    const now = Date.now();
-    if (now - lastClickTime < 300) return false;
-
-    const selectors = [
-      ".ytp-ad-skip-button-modern",
-      ".ytp-skip-ad-button",
-      ".ytp-ad-skip-button",
-      ".ytp-ad-skip-button-slot button",
-      ".ytp-ad-skip-button-container button",
-      "button.ytp-ad-skip-button-modern",
-      "button.ytp-ad-skip-button-text",
-      "[id^='skip-button:'] button",
-      "[id^='skip-button:']",
-      ".videoAdUiSkipButton",
-      "button[class*='ytp-ad-skip']"
-    ];
-
-    for (const sel of selectors) {
-      const btn = document.querySelector(sel);
-      if (btn && btn.offsetParent !== null) {
-        lastClickTime = now;
-        btn.click();
-        return true;
-      }
+    if (document.querySelector(".ad-showing, .ad-interrupting")) {
+      return true;
     }
-
-    // Generic search strictly within ad containers
-    const adModule = document.querySelector(".ytp-ad-module, .video-ads, .ytp-ad-player-overlay");
-    if (adModule) {
-      const btns = adModule.querySelectorAll("button, [role='button'], .ytp-button");
-      for (const btn of btns) {
-        const text = (btn.textContent || "").trim().toLowerCase();
-        if (text === "skip" || text.startsWith("skip ") || text.includes("skip ▶")) {
-          lastClickTime = now;
-          btn.click();
-          return true;
-        }
-      }
+    // Auto End Screen / Post-Roll CTA / Interstitial Ad card check
+    const interstitial = document.querySelector(
+      ".ytp-ad-action-interstitial, .ytp-ad-player-overlay-layout"
+    );
+    if (interstitial && isElementVisible(interstitial)) {
+      return true;
     }
-
+    // If any skip button is visible on screen, an ad or end card is definitely active
+    if (findAnySkipButton() !== null) {
+      return true;
+    }
     return false;
   }
 
   // Main ad handling loop - runs every 200ms (lightweight, zero lag, no recursion)
   function handleAds() {
+    // 1. ALWAYS attempt to click any skip button if autoSkip is enabled!
+    // This handles skippable video ads, modern skip buttons, and Auto End Screens (Post-Roll CTA cards)
+    if (settings.autoSkip) {
+      const skipBtn = findAnySkipButton();
+      if (skipBtn) {
+        const now = Date.now();
+        if (now - lastClickTime >= 250) {
+          lastClickTime = now;
+          safeClick(skipBtn);
+          if (!hasRecordedCurrentAd) {
+            hasRecordedCurrentAd = true;
+            recordAdSkipped();
+          }
+        }
+      }
+    }
+
+    // 2. Dismiss any banner / overlay close buttons
+    if (settings.blockBanners) {
+      const closeSelectors = [
+        ".ytp-ad-overlay-close-button",
+        ".ytp-ad-overlay-close-container button",
+        ".ytp-ad-action-interstitial-close-button",
+        "button.ytp-ad-action-interstitial-dismiss-button"
+      ];
+      for (const sel of closeSelectors) {
+        const closeBtn = document.querySelector(sel);
+        if (closeBtn && isElementVisible(closeBtn)) {
+          safeClick(closeBtn);
+          break;
+        }
+      }
+    }
+
+    // 3. Video ad handling (muting & 16x speedup)
     const adPlaying = isAdActive();
     const video = document.querySelector("video.video-stream, video");
 
     if (adPlaying && video) {
       isHandlingAd = true;
 
-      // 1. Mute ad
+      // Mute ad
       if (settings.muteAds && !video.muted) {
         wasMutedByAdSkipper = true;
         video.muted = true;
       }
 
-      // 2. Speed up ad to 16x (finishes in ~0.8s)
-      if (settings.autoSkip && settings.speedUp && video.playbackRate < 16) {
-        video.playbackRate = 16.0;
-      }
-
-      // 3. Click skip button as soon as available
-      if (settings.autoSkip) {
-        tryClickSkipButton();
-
-        if (!hasRecordedCurrentAd) {
-          hasRecordedCurrentAd = true;
-          recordAdSkipped();
+      // Speed up video ad to 16x (finishes in ~0.8s)
+      // Only speed up if video is actively playing an ad (not ended or paused on an endcard)
+      if (settings.autoSkip && settings.speedUp) {
+        if (!video.paused && !video.ended && video.playbackRate < 16) {
+          video.playbackRate = 16.0;
         }
       }
     } else {
@@ -207,14 +325,6 @@
           }
         }
       }
-    }
-
-    // Dismiss banner close buttons if present
-    const closeBtn = document.querySelector(
-      ".ytp-ad-overlay-close-button, .ytp-ad-overlay-close-container button"
-    );
-    if (closeBtn && closeBtn.offsetParent !== null) {
-      try { closeBtn.click(); } catch (_) {}
     }
   }
 
