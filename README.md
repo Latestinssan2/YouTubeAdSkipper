@@ -25,7 +25,7 @@
 
 1. Download or clone this repository:
    ```bash
-   git clone https://github.com/Latestinssan2/youtube-ad-skipper.git
+   git clone https://github.com/Latestinssan2/YouTubeAdSkipper.git
    ```
    *(Or download `youtube-ad-skipper.zip` from releases / landing page and extract it).*
 2. Open Google Chrome (or any Chromium browser) and go to:
