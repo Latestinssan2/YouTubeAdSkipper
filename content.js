@@ -123,21 +123,79 @@
     }
   }
 
-  // Safe click supporting modern pointer & mouse events
+  // Safe click supporting modern pointer & mouse events with exact coordinates
   function safeClick(el) {
     if (!el) return false;
     try {
+      const rect = el.getBoundingClientRect();
+      const clientX = rect.left + rect.width / 2;
+      const clientY = rect.top + rect.height / 2;
+      const opts = {
+        bubbles: true,
+        cancelable: true,
+        view: window,
+        clientX,
+        clientY,
+        screenX: clientX,
+        screenY: clientY
+      };
+
+      // 1. Direct standard click
       el.click();
-    } catch (_) {}
-    try {
-      const opts = { bubbles: true, cancelable: true, view: window };
+
+      // 2. Dispatch full pointer and mouse event sequence
       el.dispatchEvent(new PointerEvent("pointerdown", opts));
       el.dispatchEvent(new MouseEvent("mousedown", opts));
       el.dispatchEvent(new PointerEvent("pointerup", opts));
       el.dispatchEvent(new MouseEvent("mouseup", opts));
       el.dispatchEvent(new MouseEvent("click", opts));
+
+      // 3. If there is an inner text/button/icon child, click that too
+      const inner = el.querySelector(".ytp-ad-skip-button-text, .ytp-ad-text, span, button");
+      if (inner && inner !== el) {
+        try {
+          inner.click();
+          inner.dispatchEvent(new MouseEvent("click", opts));
+        } catch (_) {}
+      }
+
+      // 4. If there is a parent slot container, click that too
+      const parentSlot = el.closest(".ytp-ad-skip-button-slot, .ytp-ad-skip-button-container");
+      if (parentSlot && parentSlot !== el) {
+        try {
+          parentSlot.click();
+        } catch (_) {}
+      }
     } catch (_) {}
     return true;
+  }
+
+  // Check if an element is a promotional Call-To-Action (CTA) button (e.g. "Download", "Install", "Apply now")
+  // We must NEVER treat a CTA button as a skip button!
+  function isCtaButton(el) {
+    if (!el) return false;
+    const text = (el.textContent || "").trim().toLowerCase();
+    const aria = (el.getAttribute("aria-label") || "").toLowerCase();
+    const ctaWords = [
+      "download",
+      "install",
+      "apply",
+      "learn more",
+      "shop now",
+      "visit site",
+      "open app",
+      "get app",
+      "sign up",
+      "try now",
+      "play now",
+      "watch now"
+    ];
+    for (const word of ctaWords) {
+      if (text.includes(word) || aria.includes(word)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   // Find any active skip button anywhere in the player (video ad or Auto End Screen / Post-Roll CTA)
@@ -145,43 +203,46 @@
     const player = document.querySelector("#movie_player, .html5-video-player") || document;
 
     // 1. Direct high-priority modern & legacy YouTube skip button selectors
+    // NOTE: NEVER put generic container buttons like ".ytp-ad-action-interstitial button" here!
     const directSelectors = [
       ".ytp-ad-skip-button-modern",
       ".ytp-skip-ad-button",
       ".ytp-ad-skip-button",
       ".ytp-ad-skip-button-slot button",
+      ".ytp-ad-skip-button-slot [role='button']",
       ".ytp-ad-skip-button-container button",
       "button.ytp-ad-skip-button-modern",
       "div.ytp-ad-skip-button-modern",
       "button.ytp-ad-skip-button-text",
       ".ytp-ad-skip-button-text",
       "[id^='skip-button:'] button",
+      "[id^='skip-button:'] [role='button']",
       "[id^='skip-button:']",
       ".videoAdUiSkipButton",
       "button[class*='ytp-ad-skip']",
       "div[class*='ytp-ad-skip']",
-      ".ytp-ad-action-interstitial [aria-label*='Skip' i]",
-      ".ytp-ad-action-interstitial [class*='skip' i]",
-      ".ytp-ad-action-interstitial button",
+      "button[class*='skip-button']",
+      "div[class*='skip-button']",
       "button[aria-label*='Skip' i]",
       "[role='button'][aria-label*='Skip' i]"
     ];
 
     for (const sel of directSelectors) {
       const el = player.querySelector(sel);
-      if (el && isElementVisible(el)) {
+      if (el && isElementVisible(el) && !isCtaButton(el)) {
         return el;
       }
     }
 
-    // 2. Search inside ad containers (.video-ads, .ytp-ad-module, .ytp-ad-action-interstitial, .ytp-ad-player-overlay)
+    // 2. Search ad container elements (.video-ads, .ytp-ad-module, .ytp-ad-player-overlay, etc.)
     const adContainers = player.querySelectorAll(
-      ".ytp-ad-module, .video-ads, .ytp-ad-player-overlay, .ytp-ad-action-interstitial, .ytp-ad-player-overlay-layout"
+      ".ytp-ad-module, .video-ads, .ytp-ad-player-overlay, .ytp-ad-player-overlay-layout"
     );
     for (const container of adContainers) {
       const candidates = container.querySelectorAll("button, [role='button'], div, a, span");
       for (const el of candidates) {
         if (el.hasAttribute("disabled") || el.getAttribute("aria-disabled") === "true") continue;
+        if (isCtaButton(el)) continue;
 
         const aria = (el.getAttribute("aria-label") || "").toLowerCase();
         const text = (el.textContent || "").trim().toLowerCase();
@@ -202,10 +263,11 @@
     }
 
     // 3. Fallback: Search the entire player for buttons with "skip" in text or aria-label
-    // Normal YouTube controls NEVER contain the word "skip"
-    const buttons = player.querySelectorAll("button, [role='button']");
+    // Normal YouTube video controls NEVER contain the word "skip"
+    const buttons = player.querySelectorAll("button, [role='button'], div[class*='button']");
     for (const btn of buttons) {
       if (btn.hasAttribute("disabled") || btn.getAttribute("aria-disabled") === "true") continue;
+      if (isCtaButton(btn)) continue;
 
       const aria = (btn.getAttribute("aria-label") || "").toLowerCase();
       const text = (btn.textContent || "").trim().toLowerCase();
@@ -261,7 +323,7 @@
       const skipBtn = findAnySkipButton();
       if (skipBtn) {
         const now = Date.now();
-        if (now - lastClickTime >= 250) {
+        if (now - lastClickTime >= 200) {
           lastClickTime = now;
           safeClick(skipBtn);
           if (!hasRecordedCurrentAd) {
@@ -278,7 +340,10 @@
         ".ytp-ad-overlay-close-button",
         ".ytp-ad-overlay-close-container button",
         ".ytp-ad-action-interstitial-close-button",
-        "button.ytp-ad-action-interstitial-dismiss-button"
+        "button.ytp-ad-action-interstitial-dismiss-button",
+        "button[aria-label='Close' i]",
+        "button[aria-label='Dismiss' i]",
+        "button[aria-label='Close ad' i]"
       ];
       for (const sel of closeSelectors) {
         const closeBtn = document.querySelector(sel);
@@ -323,6 +388,9 @@
             video.muted = false;
             wasMutedByAdSkipper = false;
           }
+          if (video.paused && !video.ended) {
+            video.play().catch(() => {});
+          }
         }
       }
     }
@@ -332,8 +400,8 @@
   function init() {
     loadConfig();
 
-    // 200ms lightweight loop: 5 checks/sec, 0.01% CPU, completely smooth
-    setInterval(handleAds, 200);
+    // 100ms ultra-responsive loop: 10 checks/sec, ~0.02% CPU, instant skipping
+    setInterval(handleAds, 100);
 
     // YouTube SPA navigation events
     window.addEventListener("yt-navigate-finish", () => {
