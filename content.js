@@ -32,16 +32,7 @@
     timeSavedSeconds: 0
   };
 
-  // Inject in-page helper into Main World as fallback
-  function injectMainWorldScript() {
-    try {
-      if (document.getElementById("ad-skipper-main-script")) return;
-      const script = document.createElement("script");
-      script.id = "ad-skipper-main-script";
-      script.src = chrome.runtime.getURL("inpage.js");
-      (document.head || document.documentElement).appendChild(script);
-    } catch (_) {}
-  }
+
 
   // Load settings & stats from storage
   function loadConfig() {
@@ -401,7 +392,6 @@
   // Initialize
   function init() {
     loadConfig();
-    injectMainWorldScript();
 
     // High-frequency 50ms polling loop as rock-solid safety net
     if (checkInterval) clearInterval(checkInterval);
@@ -419,12 +409,10 @@
 
     // YouTube SPA navigation events
     window.addEventListener("yt-navigate-finish", () => {
-      injectMainWorldScript();
       processAds();
       attachVideoListeners();
     });
     window.addEventListener("load", () => {
-      injectMainWorldScript();
       processAds();
       attachVideoListeners();
     });

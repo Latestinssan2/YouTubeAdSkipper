@@ -115,12 +115,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
-// Alarms for keep-alive
-try {
-  chrome.alarms.create("keepAlive", { periodInMinutes: 4 });
-  chrome.alarms.onAlarm.addListener((alarm) => {
-    if (alarm.name === "keepAlive") {
-      updateBadge();
-    }
-  });
-} catch (_) {}
+// Alarms for keep-alive (safely guarded)
+if (typeof chrome !== "undefined" && chrome?.alarms?.create) {
+  try {
+    chrome.alarms.create("keepAlive", { periodInMinutes: 4 });
+    chrome.alarms.onAlarm.addListener((alarm) => {
+      if (alarm.name === "keepAlive") {
+        updateBadge();
+      }
+    });
+  } catch (_) {}
+}
+
+// Initial badge update on service worker start
+updateBadge();
