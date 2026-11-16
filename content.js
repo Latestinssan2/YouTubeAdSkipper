@@ -1,219 +1,354 @@
 // YouTube Ad Skipper - Content Script
-// Detects YouTube ads and automatically skips/mutes them
+// High-performance, anti-detection ad skipper and muter for YouTube
 
-const AdSkipper = (() => {
+(() => {
+  "use strict";
+
+  // State
   let settings = {
-    skipInterval: 5,
-    muteAds: true,
     autoSkip: true,
-    showNotifications: false
+    muteAds: true,
+    speedUp: true,
+    skipInterval: 0,
+    showNotifications: false,
+    blockBanners: true
   };
 
-  let isAdActive = false;
-  let skipTimer = null;
+  let wasMutedByAdSkipper = false;
+  let originalVolume = 1;
+  let isCurrentlyHandlingAd = false;
+  let lastAdSkippedTime = 0;
   let observer = null;
-  let skipAttempts = 0;
-  const MAX_SKIP_ATTEMPTS = 10;
+  let checkInterval = null;
 
-  // Load settings from storage
-  function loadSettings() {
+  // Local stats cache
+  let stats = {
+    adsSkipped: 0,
+    timeSavedSeconds: 0
+  };
+
+  // Load settings & stats from storage
+  function loadConfig() {
     try {
-      chrome.storage.sync.get(
-        ["skipInterval", "muteAds", "autoSkip", "showNotifications"],
-        (result) => {
-          if (result.skipInterval !== undefined) settings.skipInterval = result.skipInterval;
-          if (result.muteAds !== undefined) settings.muteAds = result.muteAds;
-          if (result.autoSkip !== undefined) settings.autoSkip = result.autoSkip;
-          if (result.showNotifications !== undefined) settings.showNotifications = result.showNotifications;
-        }
-      );
-    } catch (e) {
-      console.log("[AdSkipper] Using default settings");
-    }
-  }
-
-  // Detect if current page is an ad
-  function isAd() {
-    const url = window.location.href;
-    if (!url.includes("youtube.com")) return false;
-
-    // Check for ad indicators in URL
-    if (url.includes("/ads/")) return true;
-    if (url.includes("ad_type=")) return true;
-    if (url.includes("ad_format=")) return true;
-
-    // Check for ad video player
-    const video = document.querySelector("video");
-    if (!video) return false;
-
-    // Check for ad-related elements
-    const adLabel = document.querySelector(".ad-showing-now-label, .ad-interrupts-label, [aria-label*='Ad'], [aria-label*='ad']");
-    if (adLabel) return true;
-
-    // Check for ad badge in player
-    const adBadge = document.querySelector(".badge-style-ad-badge, .ad-badge, [class*='ad-badge']");
-    if (adBadge) return true;
-
-    // Check for ad overlay
-    const adOverlay = document.querySelector(".ad-overlay, .ad-redirect");
-    if (adOverlay) return true;
-
-    // Check page title for ad indicators
-    const title = document.title || "";
-    if (title.toLowerCase().includes("ad")) return true;
-
-    return false;
-  }
-
-  // Mute the video
-  function muteAd() {
-    const video = document.querySelector("video");
-    if (video && settings.muteAds) {
-      video.muted = true;
-      video.volume = 0;
-    }
-  }
-
-  // Skip the ad
-  function skipAd() {
-    const video = document.querySelector("video");
-    if (!video) return false;
-
-    try {
-      // Try to skip using YouTube's skip button
-      const skipButton = document.querySelector(".ytp-skip-ad-button, .skip-ad-button, .ad-skip-button");
-      if (skipButton) {
-        skipButton.click();
-        return true;
-      }
-
-      // Fallback: skip by setting currentTime
-      const duration = video.duration;
-      if (duration && isFinite(duration)) {
-        video.currentTime = Math.min(duration - 0.1, settings.skipInterval);
-        return true;
-      }
-
-      // Try to skip by clicking the progress bar
-      const progress = document.querySelector(".ytp-progress-bar, .progress-bar");
-      if (progress) {
-        progress.click();
-        return true;
-      }
-    } catch (e) {
-      console.log("[AdSkipper] Skip error:", e);
-    }
-
-    return false;
-  }
-
-  // Attempt to skip the ad
-  function attemptSkip() {
-    if (!isAdActive) return;
-
-    skipAttempts++;
-    const skipped = skipAd();
-
-    if (skipped) {
-      console.log("[AdSkipper] Ad skipped successfully");
-      isAdActive = false;
-      stopObserving();
-      return;
-    }
-
-    if (skipAttempts >= MAX_SKIP_ATTEMPTS) {
-      console.log("[AdSkipper] Max skip attempts reached");
-      stopObserving();
-    }
-  }
-
-  // Start monitoring for ads
-  function startObserving() {
-    if (observer) return;
-
-    const config = {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["class", "style"]
-    };
-
-    observer = new MutationObserver((mutations) => {
-      if (isAd() && !isAdActive) {
-        isAdActive = true;
-        skipAttempts = 0;
-        muteAd();
-
-        if (settings.autoSkip) {
-          // Try immediate skip
-          attemptSkip();
-
-          // Set up retry timer
-          if (skipTimer) clearInterval(skipTimer);
-          skipTimer = setInterval(() => {
-            if (isAdActive) {
-              attemptSkip();
-            } else {
-              clearInterval(skipTimer);
-              skipTimer = null;
+      if (typeof chrome !== "undefined" && chrome.storage) {
+        chrome.storage.sync.get(
+          ["autoSkip", "muteAds", "speedUp", "skipInterval", "showNotifications", "blockBanners"],
+          (result) => {
+            if (result) {
+              settings = { ...settings, ...result };
             }
-          }, 1000);
-        }
-      } else if (!isAd() && isAdActive) {
-        isAdActive = false;
-        if (skipTimer) {
-          clearInterval(skipTimer);
-          skipTimer = null;
-        }
-      }
-    });
+          }
+        );
 
-    observer.observe(document, config);
+        chrome.storage.local.get(["adsSkipped", "timeSavedSeconds"], (res) => {
+          if (res) {
+            stats.adsSkipped = res.adsSkipped || 0;
+            stats.timeSavedSeconds = res.timeSavedSeconds || 0;
+          }
+        });
+      }
+    } catch (e) {
+      console.warn("[AdSkipper] Storage load error:", e);
+    }
   }
 
-  // Stop monitoring
-  function stopObserving() {
+  // Record an ad skipped
+  function recordAdSkipped() {
+    const now = Date.now();
+    // Debounce to prevent multiple counts for the same ad
+    if (now - lastAdSkippedTime < 1500) return;
+    lastAdSkippedTime = now;
+
+    stats.adsSkipped += 1;
+    stats.timeSavedSeconds += 15; // Average 15s saved per ad
+
+    try {
+      if (typeof chrome !== "undefined" && chrome.storage?.local) {
+        chrome.storage.local.set(stats);
+      }
+      if (typeof chrome !== "undefined" && chrome.runtime?.sendMessage) {
+        chrome.runtime.sendMessage({
+          type: "AD_SKIPPED",
+          stats: stats
+        }).catch(() => {});
+      }
+    } catch (_) {}
+
+    if (settings.showNotifications) {
+      showToast("Ad skipped automatically");
+    }
+  }
+
+  // Display temporary on-screen toast
+  function showToast(text) {
+    try {
+      const existing = document.querySelector(".ad-skipper-toast");
+      if (existing) existing.remove();
+
+      const toast = document.createElement("div");
+      toast.className = "ad-skipper-toast";
+      toast.innerHTML = `<span class="ad-skipper-toast-icon">✓</span> <span>${text}</span>`;
+      document.body.appendChild(toast);
+
+      setTimeout(() => {
+        toast.classList.add("fade-out");
+        setTimeout(() => toast.remove(), 300);
+      }, 2000);
+    } catch (_) {}
+  }
+
+  // Detect whether an ad is currently playing
+  function isAdActive() {
+    const player = document.querySelector("#movie_player, .html5-video-player");
+    if (player) {
+      if (
+        player.classList.contains("ad-showing") ||
+        player.classList.contains("ad-interrupting")
+      ) {
+        return true;
+      }
+    }
+
+    // Check ad overlays
+    if (document.querySelector(".ytp-ad-player-overlay, .ytp-ad-player-overlay-layout")) {
+      return true;
+    }
+
+    // Check ad skip button
+    if (document.querySelector(".ytp-ad-skip-button, .ytp-skip-ad-button, .ytp-ad-skip-button-modern")) {
+      return true;
+    }
+
+    // Check ad text or badge
+    const adBadge = document.querySelector(".ytp-ad-text, .ytp-ad-preview-text, .badge-style-ad-badge");
+    if (adBadge && adBadge.offsetParent !== null) {
+      return true;
+    }
+
+    return false;
+  }
+
+  // Dismiss anti-adblock modals if YouTube displays any
+  function dismissAntiAdblock() {
+    try {
+      const dismissBtn = document.querySelector(
+        "tp-yt-paper-dialog:has(#feedback) #dismiss-button, tp-yt-paper-dialog button[aria-label='Close'], ytd-enforcement-message-view-model #dismiss-button"
+      );
+      if (dismissBtn) {
+        dismissBtn.click();
+      }
+    } catch (_) {}
+  }
+
+  // Main ad skipper engine
+  function processAds() {
+    const video = document.querySelector("video");
+    const adPlaying = isAdActive();
+
+    // Check and dismiss anti-adblock prompts
+    dismissAntiAdblock();
+
+    // Close overlay / popup banner ads
+    const overlayCloseButton = document.querySelector(
+      ".ytp-ad-overlay-close-button, .ytp-ad-overlay-close-container button, .ytp-ad-image-overlay button"
+    );
+    if (overlayCloseButton) {
+      try {
+        overlayCloseButton.click();
+      } catch (_) {}
+    }
+
+    if (adPlaying && video) {
+      isCurrentlyHandlingAd = true;
+
+      // 1. MUTE AD
+      if (settings.muteAds) {
+        if (!video.muted) {
+          wasMutedByAdSkipper = true;
+          originalVolume = video.volume > 0 ? video.volume : 1;
+          video.muted = true;
+        }
+      }
+
+      // 2. SPEED UP & AUTO-SKIP
+      if (settings.autoSkip) {
+        // Boost playback rate to 16x so ad finishes instantly even if unskippable
+        if (settings.speedUp && video.playbackRate < 16) {
+          video.playbackRate = 16.0;
+        }
+
+        // Jump video time to duration if finite
+        if (isFinite(video.duration) && video.duration > 0) {
+          // If skipInterval is 0 or passed, jump to end
+          video.currentTime = Math.max(0, video.duration - 0.05);
+        }
+
+        // Click any available skip buttons
+        const skipButtons = document.querySelectorAll(
+          ".ytp-ad-skip-button, .ytp-skip-ad-button, .ytp-ad-skip-button-modern, .ytp-ad-skip-button-container button, button.ytp-ad-skip-button-text, [id^='skip-button:'] button, .videoAdUiSkipButton"
+        );
+
+        for (const btn of skipButtons) {
+          if (btn && typeof btn.click === "function") {
+            btn.click();
+            btn.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+          }
+        }
+
+        recordAdSkipped();
+      }
+    } else {
+      // Ad is no longer playing, restore normal state
+      if (isCurrentlyHandlingAd) {
+        isCurrentlyHandlingAd = false;
+
+        if (video) {
+          // Restore playback rate
+          if (video.playbackRate > 2.0) {
+            video.playbackRate = 1.0;
+          }
+
+          // Unmute if muted by ad skipper
+          if (wasMutedByAdSkipper) {
+            video.muted = false;
+            video.volume = originalVolume || 1;
+            wasMutedByAdSkipper = false;
+          }
+        }
+      }
+    }
+  }
+
+  // Setup MutationObserver
+  function setupObserver() {
     if (observer) {
       observer.disconnect();
-      observer = null;
     }
-    if (skipTimer) {
-      clearInterval(skipTimer);
-      skipTimer = null;
+
+    observer = new MutationObserver(() => {
+      processAds();
+    });
+
+    const target = document.body || document.documentElement;
+    if (target) {
+      observer.observe(target, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ["class", "style", "src"]
+      });
+    }
+  }
+
+  // Setup Video Event Listeners
+  function attachVideoListeners() {
+    const video = document.querySelector("video");
+    if (video && !video.dataset.adSkipperAttached) {
+      video.dataset.adSkipperAttached = "true";
+      video.addEventListener("timeupdate", processAds);
+      video.addEventListener("play", processAds);
+      video.addEventListener("ratechange", () => {
+        // Prevent ad from resetting its own rate back to 1.0 while ad is active
+        if (isAdActive() && settings.autoSkip && settings.speedUp && video.playbackRate < 16) {
+          video.playbackRate = 16.0;
+        }
+      });
     }
   }
 
   // Initialize
   function init() {
-    loadSettings();
-    startObserving();
+    loadConfig();
 
-    // Listen for settings changes
-    chrome.storage.onChanged.addListener((changes, area) => {
-      if (area === "sync") {
-        Object.keys(changes).forEach((key) => {
-          if (settings.hasOwnProperty(key)) {
-            settings[key] = changes[key].newValue;
-          }
-        });
-      }
+    // Start polling loop as resilient fallback
+    if (checkInterval) clearInterval(checkInterval);
+    checkInterval = setInterval(() => {
+      attachVideoListeners();
+      processAds();
+    }, 250);
+
+    // Initial observer
+    if (document.body) {
+      setupObserver();
+    } else {
+      document.addEventListener("DOMContentLoaded", setupObserver);
+    }
+
+    // YouTube SPA navigation events
+    window.addEventListener("yt-navigate-finish", () => {
+      processAds();
+      attachVideoListeners();
     });
+    window.addEventListener("load", () => {
+      processAds();
+      attachVideoListeners();
+    });
+
+    // Listen for storage changes
+    if (typeof chrome !== "undefined" && chrome.storage?.onChanged) {
+      chrome.storage.onChanged.addListener((changes, area) => {
+        if (area === "sync") {
+          for (const key of Object.keys(changes)) {
+            if (key in settings) {
+              settings[key] = changes[key].newValue;
+            }
+          }
+        }
+      });
+    }
+
+    // Listen for messages from popup & background
+    if (typeof chrome !== "undefined" && chrome.runtime?.onMessage) {
+      chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+        try {
+          switch (message.type) {
+            case "PING":
+              sendResponse({ status: "ok", active: true });
+              return true;
+
+            case "GET_STATUS":
+              sendResponse({
+                isYouTube: true,
+                isAd: isAdActive(),
+                settings: settings,
+                stats: stats
+              });
+              return true;
+
+            case "TEST_SKIP":
+              const adFound = isAdActive();
+              processAds();
+              showToast("Ad Skipper is active!");
+              sendResponse({
+                success: true,
+                isAd: adFound,
+                stats: stats,
+                message: adFound ? "Ad detected & skipped!" : "Ad Skipper tested: Active & ready."
+              });
+              return true;
+
+            case "UPDATE_SETTINGS":
+              if (message.settings) {
+                settings = { ...settings, ...message.settings };
+              }
+              sendResponse({ success: true });
+              return true;
+
+            default:
+              sendResponse({ status: "ignored" });
+              return false;
+          }
+        } catch (err) {
+          console.error("[AdSkipper] Error processing message:", err);
+          sendResponse({ error: err.message });
+          return false;
+        }
+      });
+    }
+
+    console.log("[AdSkipper] Content script loaded and active.");
   }
 
-  // Public API
-  return {
-    init,
-    isAd,
-    muteAd,
-    skipAd,
-    startObserving,
-    stopObserving
-  };
+  // Start initialization immediately
+  init();
 })();
-
-// Initialize when DOM is ready
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", () => AdSkipper.init());
-} else {
-  AdSkipper.init();
-}

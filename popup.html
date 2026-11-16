@@ -7,52 +7,95 @@
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <div class="container">
+  <div class="popup-container">
+    <!-- Header -->
     <header class="header">
       <div class="logo">
-        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+        <svg class="logo-icon" viewBox="0 0 32 32" fill="none">
           <rect width="32" height="32" rx="8" fill="#FF0000"/>
-          <path d="M13 9L23 16L13 23V9Z" fill="white"/>
+          <path d="M12 9.5L23 16L12 22.5V9.5Z" fill="white"/>
         </svg>
+        <span class="logo-title">Ad Skipper</span>
       </div>
-      <h1>Ad Skipper</h1>
+      <a href="#" id="optionsBtn" class="icon-btn" title="Settings">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </a>
     </header>
 
-    <div class="status" id="status">
-      <span class="dot"></span>
-      <span id="statusText">Ready</span>
+    <!-- Status Banner -->
+    <div class="status-banner" id="statusBanner">
+      <span class="status-dot" id="statusDot"></span>
+      <span class="status-label" id="statusText">Checking YouTube tab...</span>
     </div>
 
-    <div class="controls">
-      <label class="toggle">
-        <input type="checkbox" id="autoSkip" checked>
-        <span class="toggle-label">Auto Skip Ads</span>
+    <!-- Quick Stats -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <span class="stat-number" id="adsSkippedCount">0</span>
+        <span class="stat-label">Ads Skipped</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-number" id="timeSavedCount">0m</span>
+        <span class="stat-label">Time Saved</span>
+      </div>
+    </div>
+
+    <!-- Toggles -->
+    <div class="controls-list">
+      <label class="control-item">
+        <div class="control-info">
+          <span class="control-title">Auto Skip Ads</span>
+          <span class="control-desc">Instantly skips video ads</span>
+        </div>
+        <input type="checkbox" id="autoSkip" class="switch" checked>
       </label>
 
-      <label class="toggle">
-        <input type="checkbox" id="muteAds" checked>
-        <span class="toggle-label">Mute Ads</span>
+      <label class="control-item">
+        <div class="control-info">
+          <span class="control-title">Smart Mute</span>
+          <span class="control-desc">Silences ads automatically</span>
+        </div>
+        <input type="checkbox" id="muteAds" class="switch" checked>
       </label>
 
-      <label class="toggle">
-        <input type="checkbox" id="showNotifications">
-        <span class="toggle-label">Show Notifications</span>
+      <label class="control-item">
+        <div class="control-info">
+          <span class="control-title">16x Ad Speedup</span>
+          <span class="control-desc">Fast-forwards unskippable ads</span>
+        </div>
+        <input type="checkbox" id="speedUp" class="switch" checked>
+      </label>
+
+      <label class="control-item">
+        <div class="control-info">
+          <span class="control-title">Block Banners</span>
+          <span class="control-desc">Hides overlay and display ads</span>
+        </div>
+        <input type="checkbox" id="blockBanners" class="switch" checked>
       </label>
     </div>
 
-    <div class="settings">
-      <label for="skipInterval">Skip after (seconds):</label>
-      <input type="number" id="skipInterval" min="1" max="30" value="5">
-    </div>
-
+    <!-- Actions -->
     <div class="actions">
-      <button id="testSkip" class="btn btn-primary">Test Skip</button>
-      <button id="openYoutube" class="btn btn-secondary">Open YouTube</button>
+      <button id="testSkip" class="btn btn-primary">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+          <polygon points="5 4 15 12 5 20 5 4"></polygon>
+          <line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line>
+        </svg>
+        <span>Test Skip</span>
+      </button>
+      <button id="openYoutube" class="btn btn-secondary">
+        <span>Open YouTube</span>
+      </button>
     </div>
 
+    <!-- Footer -->
     <footer class="footer">
-      <a href="#" id="optionsLink">Options</a>
-      <span>v1.0.0</span>
+      <span class="version">v1.0.0</span>
+      <span class="badge-status">Shield Active</span>
     </footer>
   </div>
   <script src="popup.js"></script>

@@ -1,35 +1,80 @@
-// YouTube Ad Skipper - Background Service Worker
-// Handles extension lifecycle and communication
+// YouTube Ad Skipper - Background Service Worker (Manifest V3)
 
-chrome.runtime.onInstalled.addListener((details) => {
-  if (details.reason === "install") {
-    console.log("[AdSkipper] Extension installed");
+const DEFAULT_SETTINGS = {
+  autoSkip: true,
+  muteAds: true,
+  speedUp: true,
+  skipInterval: 0,
+  showNotifications: false,
+  blockBanners: true
+};
 
-    // Set default settings
-    chrome.storage.sync.set({
-      skipInterval: 5,
-      muteAds: true,
-      autoSkip: true,
-      showNotifications: false
-    });
+const DEFAULT_STATS = {
+  adsSkipped: 0,
+  timeSavedSeconds: 0
+};
 
-    // Open popup on first install
-    chrome.tabs.create({ url: "popup.html" });
-  } else if (details.reason === "update") {
-    console.log("[AdSkipper] Extension updated");
+// Inject content scripts into any existing YouTube tabs
+async function injectIntoExistingTabs() {
+  try {
+    const tabs = await chrome.tabs.query({ url: "*://*.youtube.com/*" });
+    for (const tab of tabs) {
+      if (tab.id) {
+        try {
+          await chrome.scripting.insertCSS({
+            target: { tabId: tab.id },
+            files: ["css/ad-skipper.css"]
+          });
+        } catch (_) {}
+
+        try {
+          await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            files: ["content.js"]
+          });
+        } catch (_) {}
+      }
+    }
+  } catch (err) {
+    console.warn("[AdSkipper] Error injecting into existing tabs:", err);
   }
+}
+
+// Extension installation or update
+chrome.runtime.onInstalled.addListener(async (details) => {
+  console.log(`[AdSkipper] Extension ${details.reason}`);
+
+  if (details.reason === "install") {
+    chrome.storage.sync.set(DEFAULT_SETTINGS);
+    chrome.storage.local.set(DEFAULT_STATS);
+  }
+
+  // Inject into open YouTube tabs
+  await injectIntoExistingTabs();
 });
 
-// Handle messages from content scripts and popup
+// Update badge with skipped count
+async function updateBadge() {
+  try {
+    const data = await chrome.storage.local.get("adsSkipped");
+    const count = data.adsSkipped || 0;
+    if (count > 0) {
+      const text = count > 999 ? `${(count / 1000).toFixed(1)}k` : `${count}`;
+      chrome.action.setBadgeText({ text });
+      chrome.action.setBadgeBackgroundColor({ color: "#FF0000" });
+    } else {
+      chrome.action.setBadgeText({ text: "" });
+    }
+  } catch (_) {}
+}
+
+// Handle runtime messages
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   switch (message.type) {
     case "GET_SETTINGS":
-      chrome.storage.sync.get(
-        ["skipInterval", "muteAds", "autoSkip", "showNotifications"],
-        (result) => {
-          sendResponse(result);
-        }
-      );
+      chrome.storage.sync.get(DEFAULT_SETTINGS, (settings) => {
+        sendResponse(settings);
+      });
       return true;
 
     case "SAVE_SETTINGS":
@@ -38,8 +83,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       });
       return true;
 
-    case "AD_DETECTED":
-      console.log("[AdSkipper] Ad detected on tab:", sender.tab?.url);
+    case "GET_STATS":
+      chrome.storage.local.get(DEFAULT_STATS, (stats) => {
+        sendResponse(stats);
+      });
+      return true;
+
+    case "RESET_STATS":
+      chrome.storage.local.set(DEFAULT_STATS, () => {
+        updateBadge();
+        sendResponse({ success: true });
+      });
+      return true;
+
+    case "AD_SKIPPED":
+      updateBadge();
       sendResponse({ success: true });
       return true;
 
@@ -49,10 +107,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
-// Keep service worker alive
-chrome.alarms.create("keepAlive", { periodInMinutes: 1 });
-chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === "keepAlive") {
-    // Service worker is alive
-  }
-});
+// Alarms for keep-alive
+try {
+  chrome.alarms.create("keepAlive", { periodInMinutes: 4 });
+  chrome.alarms.onAlarm.addListener((alarm) => {
+    if (alarm.name === "keepAlive") {
+      updateBadge();
+    }
+  });
+} catch (_) {}

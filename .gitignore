@@ -9,6 +9,7 @@ dist/
 build/
 *.zip
 *.crx
+!public/youtube-ad-skipper.zip
 
 # Environment
 .env
@@ -29,3 +30,4 @@ logs/
 
 # Coverage
 coverage/
+.vercel

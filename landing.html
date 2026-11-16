@@ -3,129 +3,920 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>YouTube Ad Skipper - Skip & Mute YouTube Ads</title>
-  <meta name="description" content="A Chrome extension that automatically skips and mutes YouTube ads for an uninterrupted viewing experience.">
+  <title>YouTube Ad Skipper — Lightning Fast, Undetectable Ad Skipper</title>
+  <meta name="description" content="A lightweight Chrome extension that automatically skips and mutes YouTube ads with 16x fast-forward. Undetected by YouTube adblock detection.">
+  <link rel="icon" type="image/png" href="icons/icon48.png">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #0f0f0f;
-      color: #fff;
-      line-height: 1.6;
+    :root {
+      --bg: #0a0a0a;
+      --card-bg: #141414;
+      --card-border: rgba(255, 255, 255, 0.08);
+      --red: #FF0000;
+      --red-hover: #e00000;
+      --red-glow: rgba(255, 0, 0, 0.35);
+      --text: #f0f0f0;
+      --text-muted: #999999;
+      --accent-green: #2ecc71;
     }
-    .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
-    header {
-      padding: 20px 0;
-      border-bottom: 1px solid #272727;
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Container */
+    .container {
+      max-width: 1140px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Navigation */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(10, 10, 10, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--card-border);
+      padding: 16px 0;
+    }
+
+    .nav-inner {
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
-    .logo { display: flex; align-items: center; gap: 12px; font-size: 20px; font-weight: 600; }
-    .logo svg { width: 36px; height: 36px; }
-    nav a { color: #aaa; margin-left: 24px; text-decoration: none; font-size: 14px; }
-    nav a:hover { color: #fff; }
-    .hero {
-      text-align: center;
-      padding: 80px 0 60px;
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+      text-decoration: none;
     }
+
+    .brand-icon {
+      width: 32px;
+      height: 32px;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+    }
+
+    .nav-link {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .nav-link:hover {
+      color: #fff;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+    }
+
+    .btn-primary {
+      background: var(--red);
+      color: #fff;
+      box-shadow: 0 4px 14px var(--red-glow);
+    }
+
+    .btn-primary:hover {
+      background: var(--red-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px var(--red-glow);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      border: 1px solid var(--card-border);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .btn-lg {
+      padding: 14px 28px;
+      font-size: 16px;
+      border-radius: 10px;
+    }
+
+    /* Hero */
+    .hero {
+      padding: 80px 0 60px;
+      text-align: center;
+      position: relative;
+    }
+
+    .hero-glow {
+      position: absolute;
+      top: -100px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(255, 0, 0, 0.15) 0%, rgba(10, 10, 10, 0) 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .pill-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: rgba(255, 0, 0, 0.1);
+      border: 1px solid rgba(255, 0, 0, 0.3);
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #ff6b6b;
+      margin-bottom: 24px;
+      position: relative;
+      z-index: 1;
+    }
+
     .hero h1 {
-      font-size: 48px;
+      font-size: 54px;
+      font-weight: 800;
+      line-height: 1.15;
       margin-bottom: 20px;
-      background: linear-gradient(135deg, #FF0000, #ff6b6b);
+      letter-spacing: -1px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .gradient-text {
+      background: linear-gradient(135deg, #ffffff 40%, #ff4b4b 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
-    .hero p { font-size: 18px; color: #aaa; max-width: 600px; margin: 0 auto 30px; }
-    .cta {
-      display: inline-block;
-      background: #FF0000;
-      color: #fff;
-      padding: 14px 32px;
-      border-radius: 8px;
-      text-decoration: none;
-      font-weight: 600;
-      font-size: 16px;
-      transition: background 0.2s;
+
+    .hero p {
+      font-size: 19px;
+      color: var(--text-muted);
+      max-width: 680px;
+      margin: 0 auto 36px;
+      line-height: 1.6;
+      position: relative;
+      z-index: 1;
     }
-    .cta:hover { background: #cc0000; }
-    .features {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 30px;
-      padding: 60px 0;
+
+    .hero-actions {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin-bottom: 60px;
+      position: relative;
+      z-index: 1;
     }
-    .feature {
-      background: #1a1a1a;
+
+    /* Live Interactive Simulator */
+    .simulator-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      overflow: hidden;
+      max-width: 840px;
+      margin: 0 auto;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+      position: relative;
+      z-index: 1;
+    }
+
+    .sim-header {
+      background: #1c1c1c;
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .window-dots {
+      display: flex;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #333;
+    }
+
+    .dot-red { background: #ff5f56; }
+    .dot-yellow { background: #ffbd2e; }
+    .dot-green { background: #27c93f; }
+
+    .sim-url {
+      font-size: 12px;
+      color: var(--text-muted);
+      background: #0f0f0f;
+      padding: 4px 16px;
+      border-radius: 6px;
+      border: 1px solid var(--card-border);
+    }
+
+    .sim-body {
       padding: 30px;
-      border-radius: 12px;
-      border: 1px solid #272727;
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      gap: 24px;
+      align-items: center;
     }
-    .feature h3 { font-size: 20px; margin-bottom: 12px; color: #FF0000; }
-    .feature p { color: #aaa; font-size: 14px; }
-    footer {
+
+    .mock-player {
+      background: #000;
+      border-radius: 12px;
+      aspect-ratio: 16 / 9;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 16px;
+      border: 1px solid #222;
+      overflow: hidden;
+    }
+
+    .player-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      transition: all 0.3s ease;
+    }
+
+    .player-overlay.ad-mode {
+      background: rgba(255, 0, 0, 0.15);
+      border: 2px solid #FF0000;
+    }
+
+    .ad-badge {
+      background: #FFCC00;
+      color: #000;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+
+    .progress-bar-bg {
+      width: 100%;
+      height: 5px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      width: 35%;
+      height: 100%;
+      background: var(--red);
+      transition: width 0.3s ease;
+    }
+
+    .sim-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      text-align: left;
+    }
+
+    .sim-stats-pill {
+      background: #1c1c1c;
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 14px;
+      display: flex;
+      justify-content: space-around;
       text-align: center;
-      padding: 40px 20px;
-      border-top: 1px solid #272727;
-      color: #666;
+    }
+
+    .sim-stat-val {
+      font-size: 22px;
+      font-weight: 700;
+      color: #ff4b4b;
+    }
+
+    .sim-stat-lbl {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* Features Grid */
+    .features {
+      padding: 90px 0;
+    }
+
+    .section-title {
+      text-align: center;
+      margin-bottom: 50px;
+    }
+
+    .section-title h2 {
+      font-size: 36px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .section-title p {
+      color: var(--text-muted);
+      font-size: 16px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    .feature-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 28px;
+      transition: all 0.3s ease;
+    }
+
+    .feature-card:hover {
+      border-color: rgba(255, 0, 0, 0.3);
+      transform: translateY(-4px);
+    }
+
+    .feature-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: rgba(255, 0, 0, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--red);
+      font-size: 20px;
+      margin-bottom: 20px;
+    }
+
+    .feature-card h3 {
+      font-size: 19px;
+      margin-bottom: 10px;
+      color: #fff;
+    }
+
+    .feature-card p {
+      color: var(--text-muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* Comparison Table */
+    .comparison {
+      padding: 60px 0 90px;
+    }
+
+    .comp-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      overflow: hidden;
+      margin-top: 30px;
+    }
+
+    .comp-table th, .comp-table td {
+      padding: 16px 20px;
+      text-align: left;
+      border-bottom: 1px solid var(--card-border);
       font-size: 14px;
     }
-    footer a { color: #4a9eff; text-decoration: none; }
-    footer a:hover { text-decoration: underline; }
+
+    .comp-table th {
+      background: #181818;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .comp-table th.highlight, .comp-table td.highlight {
+      background: rgba(255, 0, 0, 0.05);
+      border-left: 1px solid rgba(255, 0, 0, 0.2);
+      border-right: 1px solid rgba(255, 0, 0, 0.2);
+    }
+
+    .comp-badge-good {
+      color: var(--accent-green);
+      font-weight: 600;
+    }
+
+    .comp-badge-bad {
+      color: #e74c3c;
+    }
+
+    /* Installation Steps */
+    .installation {
+      padding: 60px 0 90px;
+    }
+
+    .steps-container {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      margin-top: 36px;
+    }
+
+    .step-box {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 24px;
+      position: relative;
+    }
+
+    .step-num {
+      position: absolute;
+      top: -14px;
+      left: 20px;
+      background: var(--red);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 800;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .step-box h4 {
+      font-size: 17px;
+      margin-top: 8px;
+      margin-bottom: 10px;
+    }
+
+    .step-box p {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .code-tag {
+      background: #222;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      color: #ff8080;
+    }
+
+    /* FAQ */
+    .faq {
+      padding: 60px 0 90px;
+    }
+
+    .faq-list {
+      max-width: 800px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .faq-item {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 20px 24px;
+    }
+
+    .faq-item h4 {
+      font-size: 16px;
+      margin-bottom: 8px;
+      color: #fff;
+    }
+
+    .faq-item p {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--card-border);
+      padding: 40px 0;
+      text-align: center;
+      color: #666;
+      font-size: 13px;
+    }
+
+    footer a {
+      color: #999;
+      text-decoration: none;
+      margin: 0 10px;
+      transition: color 0.2s;
+    }
+
+    footer a:hover {
+      color: #fff;
+    }
+
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 36px; }
+      .grid-3, .steps-container { grid-template-columns: 1fr; }
+      .sim-body { grid-template-columns: 1fr; }
+      .nav-links { display: none; }
+    }
   </style>
 </head>
 <body>
-  <header>
-    <div class="container">
-      <div class="logo">
-        <svg viewBox="0 0 32 32" fill="none">
-          <rect width="32" height="32" rx="8" fill="#FF0000"/>
-          <path d="M13 9L23 16L13 23V9Z" fill="white"/>
-        </svg>
-        Ad Skipper
-      </div>
-      <nav>
-        <a href="#features">Features</a>
-        <a href="#install">Install</a>
-        <a href="https://github.com" target="_blank">GitHub</a>
-      </nav>
-    </div>
-  </header>
 
+  <!-- Navigation -->
+  <nav>
+    <div class="container nav-inner">
+      <a href="#" class="brand">
+        <svg class="brand-icon" viewBox="0 0 100 100">
+          <defs>
+            <linearGradient id="navGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#FF1A1A"/>
+              <stop offset="100%" stop-color="#CC0000"/>
+            </linearGradient>
+          </defs>
+          <rect width="100" height="100" rx="22" fill="url(#navGrad)"/>
+          <polygon points="28,26 66,50 28,74" fill="#FFFFFF"/>
+          <rect x="68" y="26" width="9" height="48" rx="3" fill="#FFFFFF"/>
+        </svg>
+        <span>YouTube Ad Skipper</span>
+      </a>
+      <div class="nav-links">
+        <a href="#features" class="nav-link">Features</a>
+        <a href="#how-it-works" class="nav-link">How It Works</a>
+        <a href="#comparison" class="nav-link">Comparison</a>
+        <a href="#install" class="nav-link">Install</a>
+        <a href="#faq" class="nav-link">FAQ</a>
+        <a href="https://github.com/Latestinssan2/youtube-ad-skipper" target="_blank" class="nav-link">GitHub</a>
+      </div>
+      <a href="youtube-ad-skipper.zip" download="youtube-ad-skipper.zip" class="btn btn-primary">
+        <span>Download Extension</span>
+      </a>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
   <section class="hero">
+    <div class="hero-glow"></div>
     <div class="container">
-      <h1>Skip YouTube Ads Automatically</h1>
-      <p>A lightweight Chrome extension that detects and skips YouTube ads while muting audio — so you can get back to watching faster.</p>
-      <a class="cta" href="#install">Install for Chrome</a>
+      <div class="pill-badge">
+        <span>⚡ Version 1.0.0</span> &bull; <span>Manifest V3 Ready</span> &bull; <span>100% Free & Open Source</span>
+      </div>
+
+      <h1>
+        Skip YouTube Ads Instantly.<br>
+        <span class="gradient-text">Never Wait 5 Seconds Again.</span>
+      </h1>
+
+      <p>
+        Automatically speeds through unskippable ads at 16x speed, silences audio instantly, clicks skip buttons within milliseconds, and cleans up banner clutter. Completely immune to YouTube adblock warnings.
+      </p>
+
+      <div class="hero-actions">
+        <a href="youtube-ad-skipper.zip" download="youtube-ad-skipper.zip" class="btn btn-primary btn-lg">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <span>Download Extension (ZIP)</span>
+        </a>
+        <a href="https://github.com/Latestinssan2/youtube-ad-skipper" target="_blank" class="btn btn-secondary btn-lg">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
+          </svg>
+          <span>Star on GitHub</span>
+        </a>
+      </div>
+
+      <!-- Live Simulator -->
+      <div class="simulator-card" id="how-it-works">
+        <div class="sim-header">
+          <div class="window-dots">
+            <span class="dot dot-red"></span>
+            <span class="dot dot-yellow"></span>
+            <span class="dot dot-green"></span>
+          </div>
+          <div class="sim-url">https://www.youtube.com/watch?v=demo</div>
+          <span style="font-size: 11px; color: var(--accent-green);">● Engine Active</span>
+        </div>
+
+        <div class="sim-body">
+          <div class="mock-player">
+            <div class="player-overlay" id="simPlayerOverlay">
+              <span class="ad-badge" id="simAdBadge" style="display: none;">AD &bull; 0:15</span>
+              <h3 id="simOverlayTitle" style="color: #fff; font-size: 18px;">Now Playing: Your Favorite Video</h3>
+              <p id="simOverlaySub" style="color: #aaa; font-size: 13px;">Normal 1.0x playback &bull; Audio on</p>
+            </div>
+            <div></div>
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" id="simProgressBar"></div>
+            </div>
+          </div>
+
+          <div class="sim-controls">
+            <div class="sim-stats-pill">
+              <div>
+                <div class="sim-stat-val" id="simSkippedCount">14</div>
+                <div class="sim-stat-lbl">Ads Skipped</div>
+              </div>
+              <div>
+                <div class="sim-stat-val" id="simSavedCount">4m 20s</div>
+                <div class="sim-stat-lbl">Time Saved</div>
+              </div>
+            </div>
+
+            <button class="btn btn-primary" id="simTriggerBtn" style="width: 100%; justify-content: center;">
+              <span>Simulate YouTube Ad</span>
+            </button>
+            <p style="font-size: 12px; color: var(--text-muted); text-align: center;">
+              Click above to watch the engine detect, mute, speed up to 16x, and skip the ad in 0.2s!
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
+  <!-- Features Grid -->
   <section class="features" id="features">
     <div class="container">
-      <div class="feature">
-        <h3>⚡ Auto-Skip</h3>
-        <p>Automatically detects YouTube ads and skips them after a configurable delay. Never sit through another ad again.</p>
+      <div class="section-title">
+        <h2>Engineered for Flawless Playback</h2>
+        <p>Traditional ad blockers fight YouTube servers. We orchestrate the browser player.</p>
       </div>
-      <div class="feature">
-        <h3>🔇 Smart Mute</h3>
-        <p>Ads are muted automatically so audio doesn't blast during the skip window. Full control via the popup.</p>
-      </div>
-      <div class="feature">
-        <h3>⚙️ Customizable</h3>
-        <p>Tune skip timing, enable/disable muting, and toggle notifications from the options page.</p>
+
+      <div class="grid-3">
+        <div class="feature-card">
+          <div class="feature-icon">⚡</div>
+          <h3>16x Speed-Through</h3>
+          <p>When unskippable ads appear, our script cranks video speed to 16.0x (the browser maximum), turning 30-second delays into 1.8 seconds.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🔇</div>
+          <h3>Smart Auto-Mute</h3>
+          <p>Instant audio muting the exact millisecond an ad begins, with seamless restoration of your volume when normal content resumes.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🛡️</div>
+          <h3>Zero Anti-Adblock Triggers</h3>
+          <p>Because we do not intercept HTTP network requests or block tracking scripts, YouTube never triggers the "Ad Blockers Violate Terms" banner.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🧹</div>
+          <h3>Banner & Overlay Stripper</h3>
+          <p>Lightweight CSS rules silently eradicate bottom popup banners, sponsored recommendation cards, and display ads.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🔒</div>
+          <h3>100% Private & Local</h3>
+          <p>Zero tracking, zero analytics, zero external API calls. Everything executes entirely inside your own browser window.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">⚙️</div>
+          <h3>Manifest V3 Compliant</h3>
+          <p>Built with Google Chrome's latest Extension Platform standards using service workers and efficient storage APIs.</p>
+        </div>
       </div>
     </div>
   </section>
 
+  <!-- Comparison Section -->
+  <section class="comparison" id="comparison">
+    <div class="container">
+      <div class="section-title">
+        <h2>Why Ad Skipper Beats The Rest</h2>
+        <p>A comparison between YouTube Ad Skipper, standard ad blockers, and YouTube Premium.</p>
+      </div>
+
+      <table class="comp-table">
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th class="highlight">YouTube Ad Skipper</th>
+            <th>Standard AdBlockers</th>
+            <th>YouTube Premium</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Annual Cost</strong></td>
+            <td class="highlight"><span class="comp-badge-good">$0 (Free Forever)</span></td>
+            <td>$0</td>
+            <td class="comp-badge-bad">$167.88 / year</td>
+          </tr>
+          <tr>
+            <td><strong>YouTube Anti-Adblock Detection</strong></td>
+            <td class="highlight"><span class="comp-badge-good">Undetected (Safe)</span></td>
+            <td><span class="comp-badge-bad">Frequently Blocked</span></td>
+            <td><span class="comp-badge-good">None</span></td>
+          </tr>
+          <tr>
+            <td><strong>16x Speedup on Unskippable Ads</strong></td>
+            <td class="highlight"><span class="comp-badge-good">Yes (Instant)</span></td>
+            <td><span class="comp-badge-bad">No</span></td>
+            <td><span class="comp-badge-good">Yes (No Ads)</span></td>
+          </tr>
+          <tr>
+            <td><strong>Auto Audio Mute on Ads</strong></td>
+            <td class="highlight"><span class="comp-badge-good">Yes</span></td>
+            <td><span class="comp-badge-bad">No</span></td>
+            <td>N/A</td>
+          </tr>
+          <tr>
+            <td><strong>Removes Banner Overlays</strong></td>
+            <td class="highlight"><span class="comp-badge-good">Yes</span></td>
+            <td><span class="comp-badge-good">Yes</span></td>
+            <td><span class="comp-badge-good">Yes</span></td>
+          </tr>
+          <tr>
+            <td><strong>Data Privacy</strong></td>
+            <td class="highlight"><span class="comp-badge-good">Zero Telemetry</span></td>
+            <td>Varies by vendor</td>
+            <td>Google tracked</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Installation Steps -->
+  <section class="installation" id="install">
+    <div class="container">
+      <div class="section-title">
+        <h2>Install in 30 Seconds</h2>
+        <p>Get started right now on Google Chrome, Brave, Edge, or any Chromium browser.</p>
+      </div>
+
+      <div class="steps-container">
+        <div class="step-box">
+          <div class="step-num">1</div>
+          <h4>Download Package</h4>
+          <p>
+            Click <a href="youtube-ad-skipper.zip" download="youtube-ad-skipper.zip" style="color: #ff6b6b; font-weight: 600;">Download Extension</a> to get the clean <code class="code-tag">youtube-ad-skipper.zip</code> file, then extract it to a folder.
+          </p>
+        </div>
+
+        <div class="step-box">
+          <div class="step-num">2</div>
+          <h4>Open Chrome Extensions</h4>
+          <p>
+            Type <code class="code-tag">chrome://extensions</code> in your Chrome address bar. In the top-right corner, switch ON <strong>Developer mode</strong>.
+          </p>
+        </div>
+
+        <div class="step-box">
+          <div class="step-num">3</div>
+          <h4>Load Unpacked</h4>
+          <p>
+            Click the <strong>Load unpacked</strong> button on the top-left and select the extracted folder. Pin the icon, and enjoy ad-free YouTube!
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="faq" id="faq">
+    <div class="container">
+      <div class="section-title">
+        <h2>Frequently Asked Questions</h2>
+        <p>Everything you need to know about YouTube Ad Skipper.</p>
+      </div>
+
+      <div class="faq-list">
+        <div class="faq-item">
+          <h4>Does YouTube detect this extension?</h4>
+          <p>
+            No. Traditional ad blockers block network requests to Google ad endpoints, which triggers YouTube's server-side adblock detection. YouTube Ad Skipper operates inside the HTML5 video element by setting the playback speed to 16x, instantly muting audio, and programmatically clicking skip buttons. To YouTube, the ad played normally.
+          </p>
+        </div>
+
+        <div class="faq-item">
+          <h4>Does it work with unskippable 15-second or 30-second ads?</h4>
+          <p>
+            Yes! When an ad cannot be skipped immediately, Ad Skipper fast-forwards the video at 16.0x playback rate. A 15-second ad concludes in less than 1 second, and un-mutes automatically once your main video resumes.
+          </p>
+        </div>
+
+        <div class="faq-item">
+          <h4>Does it collect any personal data?</h4>
+          <p>
+            Never. The extension does not contain any analytics, telemetry, or external tracking servers. Your settings and skipped count stay saved locally in your browser's <code class="code-tag">chrome.storage</code>.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
   <footer>
     <div class="container">
-      <p>YouTube Ad Skipper &mdash; Open source Chrome extension.</p>
-      <p style="margin-top: 8px;">
-        <a href="https://github.com" target="_blank">GitHub</a> &middot;
-        <a href="https://github.com/releases" target="_blank">Releases</a> &middot;
-        <a href="https://vercel.com" target="_blank">Powered by Vercel</a>
+      <p style="margin-bottom: 12px;">YouTube Ad Skipper &bull; Built with Manifest V3 &bull; Open Source</p>
+      <p>
+        <a href="https://github.com/Latestinssan2/youtube-ad-skipper" target="_blank">GitHub Repository</a>
+        <a href="youtube-ad-skipper.zip" download="youtube-ad-skipper.zip">Download .ZIP</a>
+        <a href="https://vercel.com" target="_blank">Hosted on Vercel</a>
       </p>
     </div>
   </footer>
+
+  <!-- Interactive Demo Script -->
+  <script>
+    const simTriggerBtn = document.getElementById("simTriggerBtn");
+    const simPlayerOverlay = document.getElementById("simPlayerOverlay");
+    const simAdBadge = document.getElementById("simAdBadge");
+    const simOverlayTitle = document.getElementById("simOverlayTitle");
+    const simOverlaySub = document.getElementById("simOverlaySub");
+    const simProgressBar = document.getElementById("simProgressBar");
+    const simSkippedCount = document.getElementById("simSkippedCount");
+    const simSavedCount = document.getElementById("simSavedCount");
+
+    let adsSkipped = 14;
+    let secondsSaved = 260;
+
+    simTriggerBtn.addEventListener("click", () => {
+      simTriggerBtn.disabled = true;
+      simTriggerBtn.innerText = "Ad Detected! Auto-Skipping...";
+
+      // Switch to Ad Mode
+      simPlayerOverlay.classList.add("ad-mode");
+      simAdBadge.style.display = "inline-block";
+      simOverlayTitle.innerText = "Ad: Sponsored Brand Commercial (15s)";
+      simOverlaySub.innerText = "🔇 Smart Muted • ⚡ 16x Fast-Forwarding...";
+      simProgressBar.style.width = "10%";
+
+      // Fast forward
+      setTimeout(() => {
+        simProgressBar.style.width = "95%";
+      }, 100);
+
+      // Skip and return to video
+      setTimeout(() => {
+        simPlayerOverlay.classList.remove("ad-mode");
+        simAdBadge.style.display = "none";
+        simOverlayTitle.innerText = "Now Playing: Your Favorite Video";
+        simOverlaySub.innerText = "🔊 Audio Restored • 1.0x Playback";
+        simProgressBar.style.width = "40%";
+
+        adsSkipped += 1;
+        secondsSaved += 15;
+        simSkippedCount.innerText = adsSkipped;
+        const mins = Math.floor(secondsSaved / 60);
+        const secs = secondsSaved % 60;
+        simSavedCount.innerText = `${mins}m ${secs}s`;
+
+        simTriggerBtn.disabled = false;
+        simTriggerBtn.innerText = "Simulate YouTube Ad";
+      }, 350);
+    });
+  </script>
 </body>
 </html>

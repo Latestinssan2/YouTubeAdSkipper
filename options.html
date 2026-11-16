@@ -3,65 +3,100 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>YouTube Ad Skipper - Options</title>
+  <title>YouTube Ad Skipper - Preferences</title>
   <link rel="stylesheet" href="options.css">
 </head>
 <body>
-  <div class="container">
+  <div class="options-container">
     <header class="header">
-      <h1>YouTube Ad Skipper</h1>
-      <p>Configure your ad skipping preferences</p>
+      <div class="logo">
+        <svg width="36" height="36" viewBox="0 0 32 32" fill="none">
+          <rect width="32" height="32" rx="8" fill="#FF0000"/>
+          <path d="M12 9.5L23 16L12 22.5V9.5Z" fill="white"/>
+        </svg>
+        <div>
+          <h1>YouTube Ad Skipper</h1>
+          <p class="subtitle">Customize your playback and ad-skipping preferences</p>
+        </div>
+      </div>
     </header>
 
-    <div class="content">
-      <section class="section">
-        <h2>General Settings</h2>
+    <main class="content">
+      <!-- Playback Settings -->
+      <section class="card">
+        <h2>Skipping & Playback</h2>
 
-        <div class="setting">
-          <label class="toggle">
-            <input type="checkbox" id="autoSkip" checked>
-            <span class="toggle-label">Auto Skip Ads</span>
-          </label>
-          <p class="description">Automatically skip YouTube ads when detected</p>
+        <div class="setting-row">
+          <div class="setting-text">
+            <span class="setting-title">Auto Skip Ads</span>
+            <span class="setting-desc">Instantly trigger skip buttons as soon as ads start</span>
+          </div>
+          <input type="checkbox" id="autoSkip" class="switch" checked>
         </div>
 
-        <div class="setting">
-          <label class="toggle">
-            <input type="checkbox" id="muteAds" checked>
-            <span class="toggle-label">Mute Ads</span>
-          </label>
-          <p class="description">Mute audio during ads</p>
+        <div class="setting-row">
+          <div class="setting-text">
+            <span class="setting-title">Smart Mute</span>
+            <span class="setting-desc">Mutes ad audio automatically and un-mutes when your video resumes</span>
+          </div>
+          <input type="checkbox" id="muteAds" class="switch" checked>
         </div>
 
-        <div class="setting">
-          <label class="toggle">
-            <input type="checkbox" id="showNotifications">
-            <span class="toggle-label">Show Notifications</span>
-          </label>
-          <p class="description">Show a notification when an ad is skipped</p>
+        <div class="setting-row">
+          <div class="setting-text">
+            <span class="setting-title">16x Ad Speedup</span>
+            <span class="setting-desc">Speeds through unskippable ads at maximum HTML5 speed (16x)</span>
+          </div>
+          <input type="checkbox" id="speedUp" class="switch" checked>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-text">
+            <span class="setting-title">Block Banner Overlays</span>
+            <span class="setting-desc">Hides sponsored panels, banner popups, and sidebar promos</span>
+          </div>
+          <input type="checkbox" id="blockBanners" class="switch" checked>
         </div>
       </section>
 
-      <section class="section">
-        <h2>Skip Settings</h2>
+      <!-- Notifications & Feedback -->
+      <section class="card">
+        <h2>Interface & Notifications</h2>
 
-        <div class="setting">
-          <label for="skipInterval">Skip after (seconds)</label>
-          <input type="number" id="skipInterval" min="1" max="30" value="5">
-          <p class="description">Number of seconds before skipping the ad</p>
+        <div class="setting-row">
+          <div class="setting-text">
+            <span class="setting-title">Toast Notifications</span>
+            <span class="setting-desc">Display a subtle "Ad Skipped" toast on the corner of YouTube</span>
+          </div>
+          <input type="checkbox" id="showNotifications" class="switch">
         </div>
       </section>
 
-      <div class="actions">
-        <button id="save" class="btn btn-primary">Save Settings</button>
-        <button id="reset" class="btn btn-secondary">Reset to Defaults</button>
+      <!-- Statistics -->
+      <section class="card">
+        <h2>Statistics</h2>
+        <div class="stats-grid">
+          <div class="stat-box">
+            <span class="stat-value" id="optAdsSkipped">0</span>
+            <span class="stat-name">Total Ads Skipped</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-value" id="optTimeSaved">0m</span>
+            <span class="stat-name">Estimated Time Saved</span>
+          </div>
+        </div>
+        <button id="resetStatsBtn" class="btn btn-outline" style="margin-top: 16px;">Reset Statistics</button>
+      </section>
+
+      <!-- Actions -->
+      <div class="action-footer">
+        <button id="saveBtn" class="btn btn-primary">Save Settings</button>
+        <button id="resetBtn" class="btn btn-secondary">Restore Defaults</button>
       </div>
-    </div>
+    </main>
 
     <footer class="footer">
-      <a href="https://github.com" target="_blank">GitHub</a>
-      <span>v1.0.0</span>
-      <a href="https://www.youtube.com" target="_blank">YouTube</a>
+      <p>YouTube Ad Skipper &bull; Open Source Manifest V3 Extension</p>
     </footer>
   </div>
   <script src="options.js"></script>
