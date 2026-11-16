@@ -315,9 +315,20 @@
     return false;
   }
 
-  // Main ad handling loop - runs every 200ms (lightweight, zero lag, no recursion)
+  // Main ad handling loop - runs every 100ms (lightweight, ultra-responsive)
   function handleAds() {
-    // 1. ALWAYS attempt to click any skip button if autoSkip is enabled!
+    const player = document.querySelector("#movie_player, .html5-video-player");
+    const video = document.querySelector("video.video-stream, video");
+
+    // Strictly verify if an actual video ad is playing right now
+    const isRealVideoAd = Boolean(
+      player && (
+        player.classList.contains("ad-showing") ||
+        player.classList.contains("ad-interrupting")
+      ) && document.querySelector(".ad-showing, .ad-interrupting")
+    );
+
+    // 1. ALWAYS attempt to click any skip button if autoSkip is enabled
     // This handles skippable video ads, modern skip buttons, and Auto End Screens (Post-Roll CTA cards)
     if (settings.autoSkip) {
       const skipBtn = findAnySkipButton();
@@ -354,11 +365,8 @@
       }
     }
 
-    // 3. Video ad handling (muting & 16x speedup)
-    const adPlaying = isAdActive();
-    const video = document.querySelector("video.video-stream, video");
-
-    if (adPlaying && video) {
+    // 3. Video ad handling (muting, 16x fast-forward, and instant skip at 5s)
+    if (isRealVideoAd && video) {
       isHandlingAd = true;
 
       // Mute ad
@@ -367,11 +375,38 @@
         video.muted = true;
       }
 
-      // Speed up video ad to 16x (finishes in ~0.8s)
-      // Only speed up if video is actively playing an ad (not ended or paused on an endcard)
-      if (settings.autoSkip && settings.speedUp) {
-        if (!video.paused && !video.ended && video.playbackRate < 16) {
+      if (settings.autoSkip) {
+        // Fast-forward at 16x speed so the mandatory 5s countdown finishes in ~0.3s
+        if (settings.speedUp && !video.paused && !video.ended && video.playbackRate < 16) {
           video.playbackRate = 16.0;
+        }
+
+        // Once 5 seconds has elapsed OR the skip button is available: SKIP IMMEDIATELY!
+        const hasPassed5Seconds = video.currentTime >= 4.9;
+        const skipBtnAvailable = findAnySkipButton() !== null;
+
+        if (hasPassed5Seconds || skipBtnAvailable) {
+          // A. Click the skip button if present
+          const skipBtn = findAnySkipButton();
+          if (skipBtn) {
+            safeClick(skipBtn);
+          }
+
+          // B. Jump to end of the ad video so it skips immediately rather than fast-forwarding 30s/60s
+          if (!video.ended && !video.paused) {
+            try {
+              if (video.duration && !isNaN(video.duration) && video.duration > 0) {
+                video.currentTime = video.duration;
+              } else {
+                video.currentTime = 999999;
+              }
+            } catch (_) {}
+          }
+
+          if (!hasRecordedCurrentAd) {
+            hasRecordedCurrentAd = true;
+            recordAdSkipped();
+          }
         }
       }
     } else {
